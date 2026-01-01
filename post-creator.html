@@ -1,0 +1,22 @@
+<div class="container my-5">
+    <h2>Post Creator Tool</h2>
+    <form id="creatorForm">
+        <input type="text" id="title" class="form-control mb-2" placeholder="Title">
+        <input type="text" id="excerpt" class="form-control mb-2" placeholder="Short Excerpt">
+        <textarea id="content" class="form-control mb-2" placeholder="Full Content (HTML)"></textarea>
+        <button type="button" class="btn btn-primary" onclick="generateJSON()">Generate Post Code</button>
+    </form>
+    <pre id="output" class="mt-4 p-3 bg-light border"></pre>
+</div>
+<script>
+    function generateJSON() {
+        const post = {
+            id: Date.now(),
+            title: document.getElementById('title').value,
+            date: new Date().toLocaleDateString(),
+            excerpt: document.getElementById('excerpt').value,
+            content: document.getElementById('content').value
+        };
+        document.getElementById('output').textContent = JSON.stringify(post, null, 2) + ",";
+    }
+</script>
