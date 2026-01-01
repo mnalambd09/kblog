@@ -1,97 +1,76 @@
-/**
- * Application Core Logic
- * Authoritative system for managing blog state and rendering
- */
+// Data model - In production, fetch this from data/posts.json
+const blogPosts =;
 
 document.addEventListener('DOMContentLoaded', () => {
-    const postGrid = document.getElementById('postGrid');
-    const searchInput = document.getElementById('searchInput');
-    const themeToggle = document.getElementById('themeToggle');
-    const themeIcon = document.getElementById('themeIcon');
-    const searchStats = document.getElementById('searchStats');
-    const root = document.documentElement;
+    const params = new URLSearchParams(window.location.search);
+    const postId = params.get('id');
 
-    let blogData =;
-
-    // --- Module 1: Persistent Theme Management ---
-    const initTheme = () => {
-        const storedTheme = localStorage.getItem('site-theme');
-        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        
-        const currentTheme = storedTheme |
-
-| (systemPrefersDark? 'dark' : 'light');
-        applyTheme(currentTheme);
-        themeToggle.checked = (currentTheme === 'dark');
-    };
-
-    const applyTheme = (theme) => {
-        root.setAttribute('data-bs-theme', theme);
-        localStorage.setItem('site-theme', theme);
-        themeIcon.className = (theme === 'dark')? 'fas fa-sun' : 'fas fa-moon';
-    };
-
-    themeToggle.addEventListener('change', (e) => {
-        applyTheme(e.target.checked? 'dark' : 'light');
-    });
-
-    // --- Module 2: Data Ingestion and Rendering ---
-    const loadBlogContent = async () => {
-        try {
-            // Simulated asynchronous fetch from data/posts.json
-            // In a production environment, use: const res = await fetch('data/posts.json');
-            blogData =;
-            renderGrid(blogData);
-        } catch (err) {
-            postGrid.innerHTML = `<div class="alert alert-danger">Critical: Failed to ingest content data.</div>`;
-        }
-    };
-
-    const renderGrid = (items) => {
-        postGrid.innerHTML = '';
-        if (items.length === 0) {
-            postGrid.innerHTML = `<div class="col-12 text-center py-5 text-muted">No matching articles found.</div>`;
-            return;
-        }
-
-        items.forEach(post => {
-            const cardHtml = `
-                <div class="col-md-4">
-                    <article class="card h-100 shadow-sm blog-card bg-body-tertiary">
-                        <img src="${post.img}" class="card-img-top" alt="${post.title}" style="height:200px; object-fit:cover;">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">${post.category}</span>
-                                <small class="text-muted">${post.date}</small>
-                            </div>
-                            <h5 class="card-title fw-bold">${post.title}</h5>
-                            <p class="card-text text-secondary">${post.excerpt}</p>
-                        </div>
-                        <div class="card-footer bg-transparent border-0 pb-3">
-                            <a href="#" class="btn btn-primary btn-sm w-100 fw-semibold">Read Article</a>
-                        </div>
-                    </article>
-                </div>
-            `;
-            postGrid.insertAdjacentHTML('beforeend', cardHtml);
-        });
-    };
-
-    // --- Module 3: Search and Filter Algorithms ---
-    searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
-        const filtered = blogData.filter(post => 
-            post.title.toLowerCase().includes(query) |
-
-| 
-            post.excerpt.toLowerCase().includes(query) ||
-            post.category.toLowerCase().includes(query)
-        );
-        renderGrid(filtered);
-        searchStats.textContent = query? `Showing ${filtered.length} results for "${query}"` : "";
-    });
-
-    // Initialize Application
+    if (postId) {
+        renderSinglePost(postId);
+    } else {
+        renderGrid(blogPosts);
+    }
     initTheme();
-    loadBlogContent();
 });
+
+function renderGrid(posts) {
+    const grid = document.getElementById('postGrid');
+    grid.innerHTML = posts.map(post => `
+        <div class="col-md-4">
+            <div class="card h-100 blog-card" onclick="window.location.search = '?id=${post.id}'">
+                <img src="${post.img}" class="card-img-top">
+                <div class="card-body">
+                    <span class="badge bg-primary mb-2">${post.category}</span>
+                    <h5>${post.title}</h5>
+                    <p class="small text-muted">${post.excerpt}</p>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderSinglePost(id) {
+    const post = blogPosts.find(p => p.id == id);
+    if (!post) return;
+
+    document.getElementById('gridView').style.display = 'none';
+    document.getElementById('postView').style.display = 'block';
+    document.getElementById('commentSection').style.display = 'block';
+    
+    document.getElementById('fullPostContent').innerHTML = `
+        <img src="${post.img}" class="img-fluid rounded mb-4 w-100" style="max-height: 400px; object-fit: cover;">
+        <h1 class="display-4 fw-bold">${post.title}</h1>
+        <p class="text-muted">${post.date} | ${post.category}</p>
+        <div class="mt-4">${post.content}</div>
+    `;
+
+    // Initialize Giscus dynamically
+    loadGiscus();
+}
+
+function loadGiscus() {
+    const script = document.createElement('script');
+    script.src = "https://giscus.app/client.js";
+    script.setAttribute('data-repo', "/");
+    script.setAttribute('data-repo-id', "");
+    script.setAttribute('data-category', "Announcements");
+    script.setAttribute('data-category-id', "");
+    script.setAttribute('data-mapping', "pathname");
+    script.setAttribute('data-strict', "0");
+    script.setAttribute('data-reactions-enabled', "1");
+    script.setAttribute('data-emit-metadata', "0");
+    script.setAttribute('data-input-position', "bottom");
+    script.setAttribute('data-theme', "light");
+    script.setAttribute('crossorigin', "anonymous");
+    script.async = true;
+    document.getElementById('commentSection').appendChild(script);
+}
+
+// Theme management logic (Bootstrap 5.3)
+function initTheme() {
+    const toggle = document.getElementById('themeToggle');
+    toggle.addEventListener('change', () => {
+        const theme = toggle.checked? 'dark' : 'light';
+        document.documentElement.setAttribute('data-bs-theme', theme);
+    });
+}
